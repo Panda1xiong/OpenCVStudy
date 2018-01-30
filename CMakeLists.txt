@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.6)
 project(OpenCVStudy)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 #windows clion 使用vs编译器不能调试(开发中)
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
     set(Tesseract_DIR C:/Program Files \(x86\)/tesseract)
     set(Leptonica_DIR C:/Program Files \(x86\)/leptonica)
     set(OpenCV_DIR C:/Tesseract-OCR/opencv-3.4.0/buildwithtesseract)
