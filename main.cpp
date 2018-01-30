@@ -7,10 +7,13 @@ using namespace cv;
 
 int main(int argc, char* argv[])
 {
-
+#ifdef _windows
     string imageDir = "D:\\xsl\\Codes\\ImageOcr\\Images\\Images\\";
-    string imageFile = imageDir + "2(2).jpg";
-//	string imageFile = imageDir + "2.jpg";
+#else
+    string imageDir = "./";
+#endif
+//    string imageFile = imageDir + "2(2).jpg";
+	string imageFile = imageDir + "2.jpg";
 
     Mat srcImage = imread(imageFile.c_str());
     if (!srcImage.data)
@@ -35,14 +38,18 @@ int main(int argc, char* argv[])
 
     grayMat.convertTo(grayMat, CV_32F);
     //定义卷积核算子
-    Mat kernel = (Mat_<float>(3, 3) << 1, 1, 1,
-            1, 1, 1,
-            1, 1, 1);
+    float m[3][3] ={{0,1,0},{1,0,1},{0,1,0}};
+    Mat kernel = Mat(3, 3, CV_32F, m) / 4;
     Mat resultImage;
     imOperation.Convolution(grayMat, kernel, resultImage);
     //归一化结果输出
     normalize(resultImage, resultImage, 0, 1, CV_MINMAX);
     imshow("result", resultImage);
+
+
+
+
+
 
 //    Mat grayMat;
 //    cvtColor(srcImage, grayMat, CV_RGB2GRAY);

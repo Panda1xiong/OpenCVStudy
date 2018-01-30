@@ -363,10 +363,10 @@ cv::Mat ImageOperations::Filter2D_(cv::Mat& image)
 {
 	Mat resultImage(image.size(), image.type());
 	//构造核函数因子
-    Mat kern = (Mat_<float>(3, 3) << 0, 1, 0,
-            1, 0, 1,
-            0, 1, 0) / (float)4;
-	filter2D(image, resultImage, image.depth(), kern);
+    float m[3][3] ={{0,1,0},{1,0,1},{0,1,0}};
+    Mat kern = Mat(3, 3, CV_32F, m) / 4;
+    cout << "kern:" << kern << endl;
+    filter2D(image, resultImage, image.depth(), kern);
 	return resultImage;
 }
 
@@ -445,5 +445,4 @@ void ImageOperations::Convolution(cv::Mat& src, cv::Mat kernel, cv::Mat& dst)
     dft(tempA, tempA, DFT_INVERSE + DFT_SCALE, dst.rows);
     //复制结果到输出图像
     tempA(Rect(0, 0, dst.cols, dst.rows)).copyTo(dst);
-    cout << "******" << endl;
 }

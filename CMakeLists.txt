@@ -7,7 +7,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 #windows clion 使用vs编译器不能调试(开发中)
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -D_windows)
     set(Tesseract_DIR C:/Program Files \(x86\)/tesseract)
     set(Leptonica_DIR C:/Program Files \(x86\)/leptonica)
     set(OpenCV_DIR C:/Tesseract-OCR/opencv-3.4.0/buildwithtesseract)
