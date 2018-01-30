@@ -16,7 +16,6 @@ int main(int argc, char** argv)
 
     imshow("srcImage", srcImage);
     imshow("resultImage", imageOperations.Graylayered(srcImage));
-    cout << "hello world" << endl;
     waitKey(0);
     return 0;
 }
