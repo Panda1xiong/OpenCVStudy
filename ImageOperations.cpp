@@ -382,7 +382,9 @@ cv::Mat ImageOperations::DFT(cv::Mat& image)
 	//将添加的像素初始化为0 [Scalar::all(0)]
 	copyMakeBorder(srcGray, resultImage, 0, nRows - srcGray.rows,
 		0, nCols - srcGray.cols, BORDER_CONSTANT, Scalar::all(0));
-	//	为傅里叶变换的结果(实部和虚部)分配存储空间
+
+
+    //	为傅里叶变换的结果(实部和虚部)分配存储空间
 	Mat planes[] = { Mat_<float>(resultImage),Mat::zeros(resultImage.size(), CV_32F) };
 	Mat completeI;
 	//为延扩后的图像增添一个初始化为0的通道
@@ -445,4 +447,205 @@ void ImageOperations::Convolution(cv::Mat& src, cv::Mat kernel, cv::Mat& dst)
     dft(tempA, tempA, DFT_INVERSE + DFT_SCALE, dst.rows);
     //复制结果到输出图像
     tempA(Rect(0, 0, dst.cols, dst.rows)).copyTo(dst);
+}
+
+Mat ImageOperations::AddSaltNoise(Mat& srcImage, int n)
+{
+    Mat resultImage = srcImage.clone();
+    for (int k = 0; k < n; k++)
+    {
+        int i = rand() % resultImage.cols;
+        int j = rand() % resultImage.rows;
+        //图像通道判定
+        if (resultImage.channels() == 1)
+        {
+            resultImage.at<uchar>(j, i) = 255;
+        } else
+        {
+            resultImage.at<Vec3b>(j, i)[0] = 255;
+            resultImage.at<Vec3b>(j, i)[1] = 255;
+            resultImage.at<Vec3b>(j, i)[2] = 255;
+        }
+    }
+    return resultImage;
+}
+
+double ImageOperations::GenerateGaussianNoise(double mu, double sigma)
+{
+    //定义小值
+    const double epsilon = std::numeric_limits<double>::min();
+    static double z0, z1;
+    static bool flag = false;
+    flag = !flag;
+    //flag为假构造高斯随机变量X
+    if (!flag)
+    {
+        return z1 * sigma + mu;
+    }
+    double u1, u2;
+    do
+    {
+        u1 = rand() * (1.0 / RAND_MAX);
+        u2 = rand() * (1.0 / RAND_MAX);
+    } while (u1 <= epsilon);
+    //flag为真构造高斯随机变量X
+    z0 = sqrt(-2.0 * log(u1)) * cos(2 * CV_PI * u2);
+    z1 = sqrt(-2.0 * log(u1)) * cos(2 * CV_PI * u2);
+    return z0 * sigma + mu;
+}
+
+Mat ImageOperations::AddGaussianNoise(Mat& srcImage)
+{
+    Mat resultImage = srcImage.clone();
+    int channels = resultImage.channels();
+    int nRows = resultImage.rows;
+    int nCols = resultImage.cols * channels;
+    //判断图像连续性
+    if (resultImage.isContinuous())
+    {
+        nCols *= nRows;
+        nRows = 1;
+    }
+    for (int i = 0; i < nRows; ++i)
+    {
+        for (int j = 0; j < nCols; ++j)
+        {
+            //添加高斯噪声
+            int val = resultImage.ptr<uchar>(i)[j] + GenerateGaussianNoise(2, 0.8) * 32;
+            if (val < 0)
+            {
+                val = 0;
+            }
+            if (val > 255)
+            {
+                val = 255;
+            }
+            resultImage.ptr<uchar>(i)[j] = (uchar) val;
+        }
+    }
+    return resultImage;
+}
+
+cv::Mat ImageOperations::CorrectImageDirection(cv::Mat& srcImage)
+{
+    /*************************图像DFT尺寸转换*************************/
+    const int nRows = srcImage.rows;
+    const int nCols = srcImage.cols;
+    //获取DFR尺寸
+    int cRows = getOptimalDFTSize(nRows);
+    int cCols = getOptimalDFTSize(nCols);
+    //复制图像,超过边界区域填充为0
+    Mat sizeConvMat;
+    copyMakeBorder(srcImage, sizeConvMat, 0, cRows - nRows, 0,
+                   cCols - nCols, BORDER_CONSTANT, Scalar::all(0));
+    /*************************图像DFT变换*******************************/
+    Mat groupMats[] = {Mat_<float>(sizeConvMat),
+                       Mat::zeros(sizeConvMat.size(), CV_32F)};
+    Mat mergeMat;
+    //通道合并
+    merge(groupMats, 2, mergeMat);
+    //DFT变换
+    dft(mergeMat, mergeMat);
+    //分离通道
+    split(mergeMat, groupMats);
+    //计算幅值
+    magnitude(groupMats[0], groupMats[1], groupMats[0]);
+    Mat magnitudeMat = groupMats[0].clone();
+    //归一化操作,幅值加1
+    magnitudeMat += Scalar::all(1);
+    //对数变换
+    log(magnitudeMat, magnitudeMat);
+    //归一化
+    normalize(magnitudeMat, magnitudeMat, 0, 1, CV_MINMAX);
+    //图像类型转换
+    magnitudeMat.convertTo(magnitudeMat, CV_8UC1, 255, 0);
+    /*************************频域中心移动*************************/
+    int cx = magnitudeMat.cols / 2;
+    int cy = magnitudeMat.rows / 2;
+    Mat tmp;
+    //Top-Left—为每一个象限创建ROI
+    Mat q0(magnitudeMat, Rect(0, 0, cx, cy));
+    Mat q1(magnitudeMat, Rect(cx, 0, cx, cy));
+    Mat q2(magnitudeMat, Rect(0, cy, cx, cy));
+    Mat q3(magnitudeMat, Rect(cx, cy, cx, cy));
+    //交换象限(Top-Left with Bottom-Right)
+    q0.copyTo(tmp);
+    q3.copyTo(q0);
+    tmp.copyTo(q3);
+    //交换象限(Top-Right with Bottom-Left)
+    q1.copyTo(tmp);
+    q2.copyTo(q1);
+    tmp.copyTo(q2);
+    /*************************倾斜角检测*************************/
+    //固定阈值二值化处理
+    Mat binaryMagnMat;
+    threshold(magnitudeMat, binaryMagnMat, 134, 255, CV_THRESH_BINARY);
+    imshow("binaryMagnMat", binaryMagnMat);
+    //霍夫变换
+    vector<Vec2f> lines;
+    binaryMagnMat.convertTo(binaryMagnMat, CV_8UC1, 255, 0);
+    HoughLines(binaryMagnMat, lines, 1, CV_PI / 180, 100, 0, 0);
+    //检测线个数
+    Mat houghMat(binaryMagnMat.size(), CV_8UC3);
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+        //绘制检测线
+        float rho = lines[i][0], theta = lines[i][1];
+        Point pt1, pt2;
+        //坐标变换生成线表达式
+        double a = cos(theta), b = sin(theta);
+        double x0 = a * rho, y0 = b * rho;
+        pt1.x = cvRound(x0 + 1000 * (-b));
+        pt1.y = cvRound(y0 + 1000 * (a));
+        pt2.x = cvRound(x0 + 1000 * (-b));
+        pt2.y = cvRound(y0 + 1000 * (a));
+        line(houghMat, pt1, pt2, Scalar(0, 0, 255), 3, CV_AA);
+    }
+
+
+    float theta = 0;
+    //检测线角度判断
+    for (size_t i = 0; i < lines.size(); ++i)
+    {
+//        float thetaTemp = lines[i][1] * 180 / (float)CV_PI;
+//        if (thetaTemp > 0 && thetaTemp < 90)
+//        {
+//            theta = thetaTemp;
+//            break;
+//        }
+//        if (thetaTemp > 90 && thetaTemp < 180)
+//        {
+//            theta = thetaTemp - (float) CV_PI;
+//            break;
+//        }
+        float piThresh = CV_PI/(float)90;
+        float pi2 = CV_PI/(float)2;
+        float thetaTemp = lines[i][1];
+        if (abs(thetaTemp) < piThresh || abs(thetaTemp - pi2) < piThresh)
+        {
+            continue;
+        } else
+        {
+            theta = thetaTemp;
+            break;
+        }
+    }
+    theta = theta * 180 / (float) CV_PI;
+
+    //角度转换
+    float angelT = nRows * tan(theta / 180 * (float)CV_PI) / nCols;
+    theta = atan(angelT) * 180 / (float)CV_PI;
+    cout << "theta:" << theta << endl;
+    /*************************仿射变换矫正*************************/
+    //取图像中心
+    Point2f centerPoint = Point2f(nCols / 2, nRows / 2);
+    double scale = 1;
+    //计算旋转矩阵
+    Mat warpMat = getRotationMatrix2D(centerPoint, theta, scale);
+    //仿射变换
+    Mat resultImage(srcImage.size(), srcImage.type());
+    warpAffine(srcImage, resultImage, warpMat, resultImage.size());
+    imshow("result", resultImage);
+    waitKey(0);
+    return resultImage;
 }

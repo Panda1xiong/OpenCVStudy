@@ -12,19 +12,19 @@ int main(int argc, char* argv[])
 #else
     string imageDir = "./";
 #endif
-//    string imageFile = imageDir + "2(2).jpg";
-	string imageFile = imageDir + "2.jpg";
+//    string imageFile = imageDir + "2.jpg";
+	string imageFile = imageDir + "1.jpg";
 
     Mat srcImage = imread(imageFile.c_str());
     if (!srcImage.data)
     {
         return 1;
     }
-    imshow("srcImage:", srcImage);
+//    imshow("srcImage:", srcImage);
 
     Mat grayMat;
     cvtColor(srcImage, grayMat, CV_RGB2GRAY);
-    imshow("grayimage", grayMat);
+//    imshow("grayimage", grayMat);
 
     ImageOperations imOperation;
 //    imOperation.MoiveImage(srcImage);
@@ -35,20 +35,29 @@ int main(int argc, char* argv[])
 //    imOperation.Pyramid(srcImage);
 //    imshow("result", imOperation.Filter2D_(srcImage));
 //	  imshow("resultImage", imOperation.DFT(srcImage));
-
-    grayMat.convertTo(grayMat, CV_32F);
-    //定义卷积核算子
-    float m[3][3] ={{0,1,0},{1,0,1},{0,1,0}};
-    Mat kernel = Mat(3, 3, CV_32F, m) / 4;
-    Mat resultImage;
-    imOperation.Convolution(grayMat, kernel, resultImage);
-    //归一化结果输出
-    normalize(resultImage, resultImage, 0, 1, CV_MINMAX);
-    imshow("result", resultImage);
+     imOperation.CorrectImageDirection(grayMat);
 
 
+//    grayMat.convertTo(grayMat, CV_32F);
+//    //定义卷积核算子
+//    float m[3][3] ={{0,1,0},{1,0,1},{0,1,0}};
+//    Mat kernel = Mat(3, 3, CV_32F, m) / 4;
+//    Mat resultImage;
+//    imOperation.Convolution(grayMat, kernel, resultImage);
+//    //归一化结果输出
+//    normalize(resultImage, resultImage, 0, 1, CV_MINMAX);
+//    imshow("result", resultImage);
 
+//    imshow("result", imOperation.AddSaltNoise(srcImage, 5000));
+//    imshow("result", imOperation.AddGaussianNoise(srcImage));
 
+//    Mat mBMat;
+//    medianBlur(grayMat, mBMat, 3);
+//    imshow("mbmat", mBMat);
+
+//    Mat bFMat;
+//    bilateralFilter(srcImage, bFMat, 7, 20.0, 2.0);
+//    imshow("bFMatresult", bFMat);
 
 
 //    Mat grayMat;

@@ -8,8 +8,10 @@ public:
 	ImageOperations();
 	~ImageOperations();
 private:
-	//计算当前的位置的能量熵
-	float CaculateCurrentEntropy(cv::Mat& hit,int threshold);
+    //计算当前的位置的能量熵
+    float CaculateCurrentEntropy(cv::Mat& hit, int threshold);
+    //高斯噪声
+    double GenerateGaussianNoise(double mu, double sigma);
 public:
 	//图片缩放
 	void ZoomImage(cv::Mat& image);
@@ -35,6 +37,12 @@ public:
 	cv::Mat DFT(cv::Mat& image);
     //图像卷积操作
     void Convolution(cv::Mat& graySrc,cv::Mat kernel,cv::Mat& dst);
+    //添加椒盐噪声
+    cv::Mat AddSaltNoise(cv::Mat& srcImage, int n);
+    //添加高斯噪声
+    cv::Mat AddGaussianNoise(cv::Mat& srcImage);
+    //矫正旋转文本
+    cv::Mat CorrectImageDirection(cv::Mat& srcImage);
 };
 #endif
 
