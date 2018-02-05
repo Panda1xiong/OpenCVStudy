@@ -43,6 +43,7 @@ public:
     cv::Mat AddGaussianNoise(cv::Mat& srcImage);
     //矫正旋转文本
     cv::Mat CorrectImageDirection(cv::Mat& srcImage);
+	
 };
 #endif
 
