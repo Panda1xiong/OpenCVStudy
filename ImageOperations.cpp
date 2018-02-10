@@ -4,6 +4,10 @@
 using namespace std;
 using namespace cv;
 
+cv::Mat g_srcImage, g_srcGray;
+int g_thresh = 100;
+int g_max_thresh = 255;
+cv::RNG g_rng(12345);
 
 ImageOperations::ImageOperations()
 {
@@ -648,4 +652,204 @@ cv::Mat ImageOperations::CorrectImageDirection(cv::Mat& srcImage)
     imshow("result", resultImage);
     waitKey(0);
     return resultImage;
+}
+
+void ImageOperations::thresh_callback(int, void*)
+{
+    Mat srcTemp = g_srcImage.clone();
+    Mat threMat;
+    //轮廓检测参数
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    //阈值化操作
+    threshold(g_srcGray, threMat, g_thresh, 255, THRESH_BINARY);
+    //轮廓检测
+    findContours(threMat, contours, hierarchy,
+                 CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    //凸包及缺陷检测参数
+    vector<vector<Point>> pointHull(contours.size());
+    vector<vector<int>> intHull(contours.size());
+    vector<vector<Vec4i>> hullDefect(contours.size());
+    for (size_t i = 0; i < contours.size(); ++i)
+    {
+        //Point类型凸包检测
+        convexHull(Mat(contours[i]), pointHull[i], false);
+        //int类型凸包检测
+        convexHull(Mat(contours[i]), intHull[i], false);
+        //凸包缺陷检测
+        convexityDefects(Mat(contours[i]), intHull[i], hullDefect[i]);
+    }
+    //绘制凸包及缺陷检测
+    Mat drawing = Mat::zeros(threMat.size(), CV_8UC3);
+	for (size_t i = 0; i < contours.size(); ++i)
+	{
+		Scalar color = Scalar(g_rng.uniform(0, 255),
+			g_rng.uniform(0, 255), g_rng.uniform(0, 255));
+		drawContours(drawing, contours, i, color, 1,
+			8, vector<Vec4i>(), 0, Point());
+		//绘制缺陷
+		size_t count = contours[i].size();
+		if (count < 300)
+		{
+			continue;
+		}
+		//设置凸包缺陷迭代器
+		vector<Vec4i>::iterator iterDefects = hullDefect[i].begin();
+		//遍历得到4个特征量
+		while (iterDefects != hullDefect[i].end())
+		{
+			Vec4i& v = (*iterDefects);
+			//起始位置
+			int startidx = v[0];
+			Point ptStart(contours[i][startidx]);
+			//终止位置
+			int endidx = v[1];
+			Point ptEnd(contours[i][endidx]);
+			//内凸壳的最远点缺陷
+			int faridx = v[2];
+			Point ptrFar(contours[i][faridx]);
+			//凸起点之间的最远点
+			int depth = v[3] / 256;
+			//绘制相应的线与园检测结果
+			if (depth > 20 && depth < 80)
+			{
+				line(drawing, ptStart, ptrFar, CV_RGB(0, 255, 0), 2);
+				line(drawing, ptEnd, ptrFar, CV_RGB(0, 255, 0), 2);
+				circle(drawing, ptStart, 4, Scalar(255, 0, 100), 2);
+				circle(drawing, ptEnd, 4, Scalar(255, 0, 100), 2);
+				circle(drawing, ptrFar, 4, Scalar(255, 0, 100), 2);
+			}
+			iterDefects++;
+		}
+		rectangle(drawing, boundingRect(contours.at(i)), Scalar(255, 255, 255));
+
+	}
+	imshow("result", drawing);
+}
+
+void ImageOperations::CacMoments(cv::Mat& src)
+{
+	Mat srcGray;
+	Mat srcThreshold;
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	//高斯滤波
+	GaussianBlur(src, src, Size(3, 3), 0.1, 0, BORDER_DEFAULT);
+	//灰度转换
+	cvtColor(src, srcGray, CV_RGB2GRAY);
+	//阈值化操作
+	threshold(srcGray, srcThreshold, 100, 255, THRESH_BINARY);
+	//轮廓边界检测
+	findContours(srcThreshold, contours, hierarchy,
+                 CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+	//绘制边界
+	//drawContours(src, contours, -1, cvScalar(0, 0, 255));
+	printf("Number of contours: %d;Number of hierarchy: %d\n", (int)contours.size(), (int)hierarchy.size());
+
+	//逼近多边形曲线
+	vector<vector<Point>> approxPoint(contours.size());
+	for (int i = 0; i < (int)contours.size(); i++)
+	{
+		approxPolyDP(contours[i], approxPoint[i], 3, true);
+	}
+
+	////计算轮廓矩
+	//vector<Moments> mu(contours.size());
+	//for (size_t i = 0; i < contours.size(); i++)
+	//{
+	//	//mu[i] = moments(contours[i], false);
+	//	//二值化后
+	//	mu[i] = moments(contours[i], true);
+	//}
+	//分析矩计算图像的相关特征
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		////面积、重心、边界轮廓长度
+		//int area = mu[i].m00;
+		//int cx = mu[i].m10 / mu[i].m00;
+		//int cy = mu[i].m01 / mu[i].m00;
+		//int perimeter = arcLength(contours.at(i), true);
+		////椭圆
+		//RotatedRect rRect = fitEllipse(contours.at(i));
+		//double orientation = rRect.angle;
+		//double orientation_rads = orientation*3.1416 / 180;
+		//double majorAxis = rRect.size.height > rRect.size.width ?
+		//	rRect.size.height : rRect.size.width;
+		//double minorAxis = rRect.size.height > rRect.size.width ?
+		//	rRect.size.width : rRect.size.height;
+		////圆形度、离心率、周长、直径
+		//double roundness = pow(perimeter, 2) / (2 * 3.1416*area);
+		//double eccentricity = sqrt(1 - pow(minorAxis / majorAxis, 2));
+		//double ratio = (minorAxis / majorAxis) * 100;
+		//double diameter = sqrt((4 * area) / 3.1416);
+		////输出相关特征信息
+		//printf("面积: %d\n", area);
+		//printf("周长: %d\n", perimeter);
+		//printf("长轴: %.1f\n", majorAxis);
+		//printf("短轴: %.1f\n", minorAxis);
+		//printf("方向: %.1f\n", orientation);
+		//printf("圆形度: %.1f\n", roundness);
+		//printf("离心率: %.1f\n", eccentricity);
+		//printf("比例: %.1f\n", ratio);
+		//printf("直径: %.1f\n", diameter);
+		//printf("\n");
+		//绘制举行及椭圆
+//		ellipse(src, rRect, cvScalar(0, 255, 0));
+
+		Rect rBound = boundingRect(contours.at(i));
+
+		//if (hierarchy[i][2] < 0)
+		//{
+		//	if (contourArea(contours.at(i))<100)
+		//	{
+		//		drawContours(src, contours, i, cvScalar(255, 255, 255));
+		//		continue;
+		//	}
+		//	drawContours(src, contours, i, cvScalar(0, 0, 255));
+		//	//rectangle(src, boundingRect(contours.at(i)), Scalar(0, 0, 255));
+		//}
+		rectangle(src, boundingRect(contours.at(i)), Scalar(0, 0, 255));
+		//drawContours(src, contours, i, cvScalar(0, 0, 255));
+
+	}
+	imshow("resultImage", src);
+}
+
+void ImageOperations::CannyEdgeDetection(cv::Mat& src)
+{
+	Mat blurImage = src.clone();
+	blur(blurImage, blurImage, Size(3, 3));
+	Mat grayImage;
+	cvtColor(blurImage, grayImage, CV_RGB2GRAY);
+	Mat srcThreshold;
+	threshold(grayImage, srcThreshold, 0, 255, THRESH_BINARY | THRESH_OTSU);
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	findContours(srcThreshold, contours, hierarchy,
+		CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	//drawContours(cannyImage, contours, -1, cvScalar(255, 255, 255));
+	vector<Rect> rects;
+	int max = 0;
+	int index = 0;
+	for (size_t i = 1; i < contours.size(); i++)
+	{
+		Rect bRect = boundingRect(contours.at(i));
+		if(bRect.size().width>max)
+		{
+			max = bRect.size().width;
+			index = i;
+		}
+		rectangle(src, bRect, Scalar(0, 0, 255));
+		
+	}
+	//groupRectangles_meanshift( )
+	for (size_t i = 0; i < rects.size(); i++)
+	{
+	}
+	//resize(src, src, Size(src.cols / 2, src.rows / 2));
+	//Rect r(src.size().width - 500, 0, 500, 500);
+	//Mat tmp = src(r);
+	//imshow("result", tmp);
+	imshow("result", src);
 }

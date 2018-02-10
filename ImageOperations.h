@@ -2,6 +2,11 @@
 #define IMAGEOPERATIONS_H
 #include <opencv2/opencv.hpp>
 
+extern cv::Mat g_srcImage,g_srcGray;
+extern int g_thresh;
+extern int g_max_thresh;
+extern cv::RNG g_rng;
+
 class ImageOperations
 {
 public:
@@ -15,10 +20,10 @@ private:
 public:
 	//图片缩放
 	void ZoomImage(cv::Mat& image);
-	//图片移动
-	void MoiveImage(cv::Mat& image);
 	//Camma矫正
 	cv::Mat GammaTransform(cv::Mat& image, float kFactor);
+	//图片移动
+	void MoiveImage(cv::Mat& image);
 	//分段灰度拉伸
 	cv::Mat contrastStetch(cv::Mat& grayImage);
 	//灰度分层
@@ -35,14 +40,21 @@ public:
 	cv::Mat Filter2D_(cv::Mat& image);
 	//图像傅里叶变换
 	cv::Mat DFT(cv::Mat& image);
-    //图像卷积操作
+	//图像卷积操作
     void Convolution(cv::Mat& graySrc,cv::Mat kernel,cv::Mat& dst);
-    //添加椒盐噪声
+	//添加椒盐噪声
     cv::Mat AddSaltNoise(cv::Mat& srcImage, int n);
-    //添加高斯噪声
+	//添加高斯噪声
     cv::Mat AddGaussianNoise(cv::Mat& srcImage);
-    //矫正旋转文本
-    cv::Mat CorrectImageDirection(cv::Mat& srcImage);
+	//矫正旋转文本
+	cv::Mat CorrectImageDirection(cv::Mat& srcImage);
+	//凸包及缺陷检测
+	static void thresh_callback(int,void*);
+	//轮廓矩
+	void CacMoments(cv::Mat& src);
+	//canny边缘检测
+	void CannyEdgeDetection(cv::Mat& src);
+	//点多边形测试
 	
 };
 #endif

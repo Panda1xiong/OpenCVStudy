@@ -11,8 +11,9 @@ int main(int argc, char* argv[])
 #else
     string imageDir = "./";
 #endif
-//    string imageFile = imageDir + "2.jpg";
-	string imageFile = imageDir + "1.jpg";
+	//string imageFile = imageDir + "005.jpg";
+	string imageFile = imageDir + "3 (5).jpg";
+	//string imageFile = imageDir + "1.jpg";
 
     Mat srcImage = imread(imageFile.c_str());
     if (!srcImage.data)
@@ -34,7 +35,26 @@ int main(int argc, char* argv[])
 //    imOperation.Pyramid(srcImage);
 //    imshow("result", imOperation.Filter2D_(srcImage));
 //	  imshow("resultImage", imOperation.DFT(srcImage));
-     imOperation.CorrectImageDirection(grayMat);
+     //imOperation.CorrectImageDirection(grayMat);
+
+
+	//g_srcImage = imread(imageFile.c_str());
+	//if (!g_srcImage.data)
+	//{
+	//	return -1;
+	//}
+	//cvtColor(g_srcImage, g_srcGray, CV_BGR2GRAY);
+	//blur(g_srcGray, g_srcGray, Size(3, 3));
+	//char* source_windows = "source";
+	//namedWindow(source_windows, CV_WINDOW_AUTOSIZE);
+	//imshow(source_windows, g_srcGray);
+	////调用鼠标操作事件
+	//createTrackbar("Threshold:", "source", &g_thresh, g_max_thresh,
+	//	ImageOperations::thresh_callback);
+	//ImageOperations::thresh_callback(0, 0);
+
+	//imOperation.CacMoments(srcImage);
+	imOperation.CannyEdgeDetection(srcImage);
 
 
 //    grayMat.convertTo(grayMat, CV_32F);

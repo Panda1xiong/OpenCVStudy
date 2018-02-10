@@ -21,8 +21,10 @@ find_package(Leptonica REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(${Tesseract_INCLUDE_DIRS} ${Leptonica_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+message(${Tesseract_INCLUDE_DIRS} ${Leptonica_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
 #${Tesseract_LIBRARIES} ${Leptonica_LIBRARIES} ${OpenCV_LIBS}
 
+#aux_source_directory(. SOURCE_FILE)
 set(SOURCE_FILE main.cpp ImageOperations.cpp)
 add_executable(OpenCVStudy ${SOURCE_FILE})
 target_link_libraries(OpenCVStudy ${Tesseract_LIBRARIES} ${Leptonica_LIBRARIES} ${OpenCV_LIBS})
